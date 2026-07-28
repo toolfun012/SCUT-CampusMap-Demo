@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>校园导航 Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="control-panel">
+        <h1>校园导航 Demo</h1>
+
+        <section class="control-group">
+          <h2>当前位置</h2>
+          <div class="input-row">
+            <label>
+              X
+              <input id="startX" type="number" inputmode="numeric" placeholder="710" />
+            </label>
+            <label>
+              Y
+              <input id="startY" type="number" inputmode="numeric" placeholder="2405" />
+            </label>
+          </div>
+          <button id="setStartButton" type="button">确定当前位置</button>
+        </section>
+
+        <section class="control-group">
+          <h2>目的地</h2>
+          <label class="full-field">
+            地点
+            <input id="destinationInput" list="placeOptions" placeholder="library / 图书馆" />
+            <datalist id="placeOptions"></datalist>
+          </label>
+          <button id="setDestinationButton" type="button">确定地点目的地</button>
+          <div class="field-divider">或使用终点坐标</div>
+          <div class="input-row">
+            <label>
+              X
+              <input id="goalX" type="number" inputmode="numeric" placeholder="1710" />
+            </label>
+            <label>
+              Y
+              <input id="goalY" type="number" inputmode="numeric" placeholder="2380" />
+            </label>
+          </div>
+          <button id="setGoalPointButton" type="button">确定坐标终点</button>
+          <button id="routeButton" type="button">规划路线</button>
+        </section>
+
+        <section class="status-card">
+          <h2>结果</h2>
+          <p id="statusText">正在加载地图数据...</p>
+          <dl>
+            <div>
+              <dt>吸附起点</dt>
+              <dd id="startSnapText">-</dd>
+            </div>
+            <div>
+              <dt>吸附终点</dt>
+              <dd id="goalSnapText">-</dd>
+            </div>
+            <div>
+              <dt>路线</dt>
+              <dd id="routeSummaryText">-</dd>
+            </div>
+          </dl>
+          <button id="resetSelectionButton" class="secondary-button" type="button">清空起终点和路线</button>
+        </section>
+      </aside>
+
+      <section class="map-panel">
+        <div class="map-toolbar">
+          <span id="hoverPosition">x: -, y: -</span>
+          <div class="click-mode">
+            <label><input type="radio" name="clickTarget" value="start" checked /> 点击填起点</label>
+            <label><input type="radio" name="clickTarget" value="goal" /> 点击填终点</label>
+          </div>
+          <button id="clearButton" type="button">清空</button>
+        </div>
+        <div class="map-frame">
+          <div class="map-layer" id="mapLayer">
+            <img id="baseMap" alt="华南理工大学大学城校区地图" src="../../微信图片_20260728004126_141_1.png" />
+            <canvas id="routeCanvas"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./campus_data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
