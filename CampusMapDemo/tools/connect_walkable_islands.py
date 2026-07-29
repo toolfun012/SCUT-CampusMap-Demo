@@ -22,6 +22,15 @@ def project_dir_from_script() -> Path:
 
 
 def find_base_image(project_dir: Path, size: tuple[int, int]) -> Path:
+    bundled = project_dir / "web" / "assets" / "campus_map.png"
+    if bundled.exists():
+        try:
+            with Image.open(bundled) as image:
+                if image.size == size:
+                    return bundled
+        except OSError:
+            pass
+
     for path in sorted(project_dir.parent.glob("*.png")):
         try:
             with Image.open(path) as image:
@@ -29,7 +38,7 @@ def find_base_image(project_dir: Path, size: tuple[int, int]) -> Path:
                     return path
         except OSError:
             continue
-    raise FileNotFoundError(f"no {size[0]}x{size[1]} PNG found next to CampusMapDemo")
+    raise FileNotFoundError(f"no {size[0]}x{size[1]} PNG found in web/assets or next to CampusMapDemo")
 
 
 def resolve_project_path(project_dir: Path, path: Path) -> Path:

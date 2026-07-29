@@ -1,0 +1,128 @@
+<view class="page" bindtap="hideDestinationDropdown">
+  <view class="map-card">
+    <view class="map-header">
+      <view class="mode-switch">
+        <view
+          class="mode-item {{clickTarget === 'start' ? 'active' : ''}}"
+        >起点</view>
+        <view
+          class="mode-item {{clickTarget === 'goal' ? 'active' : ''}}"
+        >终点</view>
+      </view>
+
+      <view class="map-tools">
+        <button class="tool-button" bindtap="fitMap">适配</button>
+        <button class="tool-button icon-button" bindtap="zoomOut">-</button>
+        <text class="zoom-text">{{zoomText}}</text>
+        <button class="tool-button icon-button" bindtap="zoomIn">+</button>
+        <button class="tool-button muted" bindtap="clearAll">清空</button>
+      </view>
+    </view>
+
+    <view class="map-viewport">
+      <canvas
+        id="mapCanvas"
+        class="map-canvas"
+        type="2d"
+        disable-scroll
+        bindtouchstart="onMapTouchStart"
+        bindtouchmove="onMapTouchMove"
+        bindtouchend="onMapTouchEnd"
+        bindtouchcancel="onMapTouchEnd"
+        bindwheel="onMapWheel"
+      ></canvas>
+      <cover-view class="coord-chip">{{coordText}}</cover-view>
+    </view>
+  </view>
+
+  <scroll-view class="control-scroll" scroll-y>
+    <view class="panel">
+      <view class="title-row">
+        <text class="title">校园导航 Demo</text>
+        <text class="status {{mapReady ? 'ready' : ''}}">{{mapReady ? '就绪' : '加载中'}}</text>
+      </view>
+
+      <view class="section">
+        <text class="section-title">当前位置</text>
+        <view class="input-row">
+          <label class="field">
+            <text>X</text>
+            <input type="number" value="{{startX}}" bindinput="onStartXInput" placeholder="710" />
+          </label>
+          <label class="field">
+            <text>Y</text>
+            <input type="number" value="{{startY}}" bindinput="onStartYInput" placeholder="2405" />
+          </label>
+        </view>
+        <button class="primary-button" bindtap="confirmStart">确定当前位置</button>
+      </view>
+
+      <view class="section">
+        <text class="section-title">目的地</text>
+        <view class="destination-box" catchtap="keepDestinationDropdown">
+          <label class="field full">
+            <text>地点</text>
+            <input
+              value="{{destinationInput}}"
+              bindfocus="onDestinationFocus"
+              bindinput="onDestinationInput"
+              placeholder="library / 图书馆"
+            />
+          </label>
+          <view wx:if="{{showDestinationDropdown}}" class="destination-dropdown">
+            <scroll-view scroll-y class="destination-list">
+              <view
+                wx:for="{{destinationOptions}}"
+                wx:key="id"
+                class="destination-option"
+                data-id="{{item.id}}"
+                bindtap="selectDestinationOption"
+              >
+                <text class="destination-title">{{item.title}}</text>
+                <text class="destination-subtitle">{{item.subtitle}}</text>
+              </view>
+              <view wx:if="{{destinationOptions.length === 0}}" class="destination-empty">
+                没有匹配的地点
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+        <button class="primary-button" bindtap="confirmPlaceDestination">确定地点目的地</button>
+        <view class="divider"><text>或使用坐标终点</text></view>
+        <view class="input-row">
+          <label class="field">
+            <text>X</text>
+            <input type="number" value="{{goalX}}" bindinput="onGoalXInput" placeholder="1710" />
+          </label>
+          <label class="field">
+            <text>Y</text>
+            <input type="number" value="{{goalY}}" bindinput="onGoalYInput" placeholder="2380" />
+          </label>
+        </view>
+        <view class="button-row">
+          <button class="primary-button" bindtap="confirmGoalPoint">确定坐标终点</button>
+          <button class="primary-button" bindtap="planRoute">规划路线</button>
+        </view>
+      </view>
+
+      <view class="section result-section">
+        <text class="section-title">结果</text>
+        <text class="message">{{statusText}}</text>
+        <view class="result-grid">
+          <view>
+            <text class="label">吸附起点</text>
+            <text class="value">{{startSnapText}}</text>
+          </view>
+          <view>
+            <text class="label">吸附终点</text>
+            <text class="value">{{goalSnapText}}</text>
+          </view>
+          <view>
+            <text class="label">路线</text>
+            <text class="value">{{routeSummaryText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

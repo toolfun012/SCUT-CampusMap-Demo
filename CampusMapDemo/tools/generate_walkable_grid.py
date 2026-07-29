@@ -128,9 +128,13 @@ def apply_manual_override(project_dir: Path, road: np.ndarray) -> tuple[np.ndarr
 
 
 def find_base_image(project_dir: Path) -> Path:
+    bundled = project_dir / "web" / "assets" / "campus_map.png"
+    if bundled.exists():
+        return bundled
+
     candidates = sorted(project_dir.parent.glob("*.png"))
     if not candidates:
-        raise FileNotFoundError("No campus base PNG found next to CampusMapDemo")
+        raise FileNotFoundError("No campus base PNG found in web/assets or next to CampusMapDemo")
     return candidates[0]
 
 

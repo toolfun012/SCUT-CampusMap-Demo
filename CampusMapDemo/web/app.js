@@ -24,6 +24,19 @@ const state = {
   pendingGoal: null,
   route: [],
   ready: false,
+  view: {
+    scale: 1,
+    fitScale: 1,
+    minScale: 0.1,
+    maxScale: 4,
+    offsetX: 0,
+    offsetY: 0,
+    dragging: false,
+    moved: false,
+    suppressClick: false,
+    lastMouse: null,
+    fitted: false,
+  },
 };
 
 const elements = {
@@ -46,7 +59,12 @@ const elements = {
   hoverPosition: document.querySelector("#hoverPosition"),
   baseMap: document.querySelector("#baseMap"),
   canvas: document.querySelector("#routeCanvas"),
+  mapFrame: document.querySelector("#mapFrame"),
   mapLayer: document.querySelector("#mapLayer"),
+  zoomText: document.querySelector("#zoomText"),
+  fitMapButton: document.querySelector("#fitMapButton"),
+  zoomInButton: document.querySelector("#zoomInButton"),
+  zoomOutButton: document.querySelector("#zoomOutButton"),
 };
 
 const ctx = elements.canvas.getContext("2d");
@@ -284,7 +302,61 @@ async function loadData() {
 function resizeCanvas() {
   elements.canvas.width = MAP_WIDTH;
   elements.canvas.height = MAP_HEIGHT;
+  elements.mapLayer.style.width = `${MAP_WIDTH}px`;
+  elements.mapLayer.style.height = `${MAP_HEIGHT}px`;
+  if (!state.view.fitted) {
+    fitMapToFrame();
+  } else {
+    updateMapTransform();
+  }
   drawOverlay();
+}
+
+function updateMapTransform() {
+  const { offsetX, offsetY, scale, fitScale } = state.view;
+  elements.mapLayer.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+  if (elements.zoomText) {
+    const percent = Math.round((scale / Math.max(fitScale, 0.0001)) * 100);
+    elements.zoomText.textContent = `${percent}%`;
+  }
+}
+
+function fitMapToFrame() {
+  const rect = elements.mapFrame.getBoundingClientRect();
+  const padding = 24;
+  const availableWidth = Math.max(1, rect.width - padding * 2);
+  const availableHeight = Math.max(1, rect.height - padding * 2);
+  const fitScale = Math.min(availableWidth / MAP_WIDTH, availableHeight / MAP_HEIGHT);
+  state.view.fitScale = fitScale;
+  state.view.minScale = Math.max(0.04, fitScale * 0.45);
+  state.view.maxScale = Math.max(2.8, fitScale * 22);
+  state.view.scale = fitScale;
+  state.view.offsetX = (rect.width - MAP_WIDTH * fitScale) / 2;
+  state.view.offsetY = (rect.height - MAP_HEIGHT * fitScale) / 2;
+  state.view.fitted = true;
+  updateMapTransform();
+}
+
+function screenToMap(clientX, clientY) {
+  const rect = elements.mapFrame.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left - state.view.offsetX) / state.view.scale,
+    y: (clientY - rect.top - state.view.offsetY) / state.view.scale,
+  };
+}
+
+function zoomAt(clientX, clientY, factor) {
+  const rect = elements.mapFrame.getBoundingClientRect();
+  const frameX = clientX - rect.left;
+  const frameY = clientY - rect.top;
+  const before = screenToMap(clientX, clientY);
+  state.view.scale = Math.max(
+    state.view.minScale,
+    Math.min(state.view.maxScale, state.view.scale * factor),
+  );
+  state.view.offsetX = frameX - before.x * state.view.scale;
+  state.view.offsetY = frameY - before.y * state.view.scale;
+  updateMapTransform();
 }
 
 function gridIndex(row, col) {
@@ -683,10 +755,10 @@ function findPlace(query) {
 }
 
 function mapEventToPixel(event) {
-  const rect = elements.canvas.getBoundingClientRect();
+  const point = screenToMap(event.clientX, event.clientY);
   return {
-    x: Math.min(Math.max((event.clientX - rect.left) * (MAP_WIDTH / rect.width), 0), MAP_WIDTH),
-    y: Math.min(Math.max((event.clientY - rect.top) * (MAP_HEIGHT / rect.height), 0), MAP_HEIGHT),
+    x: Math.min(Math.max(point.x, 0), MAP_WIDTH),
+    y: Math.min(Math.max(point.y, 0), MAP_HEIGHT),
   };
 }
 
@@ -900,11 +972,54 @@ elements.goalY.addEventListener("input", () => {
   state.route = [];
   drawOverlay();
 });
-elements.canvas.addEventListener("mousemove", (event) => {
+elements.canvas.addEventListener("mousedown", (event) => {
+  if (event.button !== 0) return;
+  const rect = elements.mapFrame.getBoundingClientRect();
+  state.view.dragging = true;
+  state.view.moved = false;
+  state.view.lastMouse = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+  elements.mapLayer.classList.add("is-dragging");
+  event.preventDefault();
+});
+
+window.addEventListener("mousemove", (event) => {
   const point = mapEventToPixel(event);
   elements.hoverPosition.textContent = `x: ${point.x.toFixed(0)}, y: ${point.y.toFixed(0)}`;
+
+  if (!state.view.dragging || !state.view.lastMouse) return;
+  const rect = elements.mapFrame.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const dx = x - state.view.lastMouse.x;
+  const dy = y - state.view.lastMouse.y;
+  if (Math.abs(dx) + Math.abs(dy) > 3) state.view.moved = true;
+  state.view.offsetX += dx;
+  state.view.offsetY += dy;
+  state.view.lastMouse = { x, y };
+  updateMapTransform();
 });
+
+window.addEventListener("mouseup", () => {
+  if (!state.view.dragging) return;
+  state.view.dragging = false;
+  state.view.lastMouse = null;
+  elements.mapLayer.classList.remove("is-dragging");
+  if (state.view.moved) state.view.suppressClick = true;
+});
+
+elements.canvas.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  zoomAt(event.clientX, event.clientY, event.deltaY < 0 ? 1.15 : 0.87);
+}, { passive: false });
+
 elements.canvas.addEventListener("click", (event) => {
+  if (state.view.suppressClick) {
+    state.view.suppressClick = false;
+    return;
+  }
   const point = mapEventToPixel(event);
   const target = document.querySelector('input[name="clickTarget"]:checked')?.value || "start";
   if (target === "goal") {
@@ -925,10 +1040,23 @@ elements.canvas.addEventListener("click", (event) => {
   }
   drawOverlay();
 });
+elements.fitMapButton.addEventListener("click", fitMapToFrame);
+elements.zoomInButton.addEventListener("click", () => {
+  const rect = elements.mapFrame.getBoundingClientRect();
+  zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.2);
+});
+elements.zoomOutButton.addEventListener("click", () => {
+  const rect = elements.mapFrame.getBoundingClientRect();
+  zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.84);
+});
 elements.baseMap.addEventListener("load", resizeCanvas);
 if (elements.baseMap.complete) {
   resizeCanvas();
 }
+window.addEventListener("resize", () => {
+  if (!state.view.fitted) return;
+  fitMapToFrame();
+});
 
 loadData().catch((error) => {
   setStatus(`地图数据加载失败：${error.message}`);

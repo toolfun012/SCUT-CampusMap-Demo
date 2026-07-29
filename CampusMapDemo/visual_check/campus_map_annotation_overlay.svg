@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="3629" height="4161" viewBox="0 0 3629 4161">
-  <image href="../../微信图片_20260728004126_141_1.png" x="0" y="0" width="3629" height="4161"/>
+  <image href="../web/assets/campus_map.png" x="0" y="0" width="3629" height="4161"/>
   <style>
     .area { fill-opacity: 0.22; stroke-width: 8; stroke-opacity: 0.9; }
     .road-line { fill: none; stroke: #475569; stroke-opacity: 0.65; stroke-linecap: round; stroke-linejoin: round; }

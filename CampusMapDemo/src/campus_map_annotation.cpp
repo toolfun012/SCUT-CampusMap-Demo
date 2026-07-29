@@ -1,11 +1,11 @@
-#include <iostream>
+﻿#include <iostream>
 #include <fstream>
 #include <direct.h>
 #include <string>
 #include <vector>
 
 // Initial campus map annotations for:
-// D:/Study/校内导航小程序项目/微信图片_20260728004126_141_1.png
+// web/assets/campus_map.png
 //
 // Coordinate system:
 // - origin: top-left corner of the original image
@@ -442,7 +442,7 @@ void ExportSvgOverlay(const std::vector<PlaceArea>& places, const std::string& o
         << "width=\"" << kMapImageWidth << "\" "
         << "height=\"" << kMapImageHeight << "\" "
         << "viewBox=\"0 0 " << kMapImageWidth << " " << kMapImageHeight << "\">\n";
-    out << "  <image href=\"../../微信图片_20260728004126_141_1.png\" "
+    out << "  <image href=\"../web/assets/campus_map.png\" "
         << "x=\"0\" y=\"0\" width=\"" << kMapImageWidth << "\" "
         << "height=\"" << kMapImageHeight << "\"/>\n";
     out << "  <style>\n";

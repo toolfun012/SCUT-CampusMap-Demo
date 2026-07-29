@@ -162,6 +162,10 @@ def grid_mask_to_image(mask: np.ndarray, payload: dict) -> Image.Image:
 
 
 def find_base_image(project_dir: Path) -> Path | None:
+    bundled = project_dir / "web" / "assets" / "campus_map.png"
+    if bundled.exists():
+        return bundled
+
     candidates = sorted(project_dir.parent.glob("*.png"))
     return candidates[0] if candidates else None
 

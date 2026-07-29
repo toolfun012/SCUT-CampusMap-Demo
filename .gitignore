@@ -6,3 +6,4 @@ CampusMapDemo/data/route_*.json
 CampusMapDemo/visual_check/route_*.png
 CampusMapDemo/visual_check/*_small.png
 CampusMapDemo/visual_check/connectivity_diagnosis/
+CampusMapDemo/miniprogram/project.private.config.json
