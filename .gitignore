@@ -1,9 +1,5 @@
-﻿CampusMapDemo/tools/__pycache__/
-CampusMapDemo/**/*.pyc
-CampusMapDemo/campus_map_annotation.exe
-CampusMapDemo/data/*backup*.png
-CampusMapDemo/data/route_*.json
-CampusMapDemo/visual_check/route_*.png
-CampusMapDemo/visual_check/*_small.png
-CampusMapDemo/visual_check/connectivity_diagnosis/
-CampusMapDemo/miniprogram/project.private.config.json
+project.private.config.json
+CampusMapDemo/
+虚拟路网导航系统/
+__pycache__/
+*.pyc
