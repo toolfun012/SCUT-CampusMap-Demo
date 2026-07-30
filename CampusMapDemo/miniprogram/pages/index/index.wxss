@@ -19,8 +19,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14rpx;
-  padding: 14rpx 18rpx;
+  gap: 10rpx;
+  padding: 12rpx 14rpx;
   border-bottom: 1rpx solid rgba(148, 163, 184, 0.35);
   background: rgba(238, 243, 248, 0.96);
 }
@@ -42,7 +42,7 @@
   align-items: center;
   justify-content: flex-end;
   flex: 1;
-  gap: 8rpx;
+  gap: 6rpx;
   min-width: 0;
 }
 
@@ -51,20 +51,26 @@
   align-items: center;
   justify-content: center;
   width: auto;
-  min-width: 72rpx;
+  min-width: 82rpx;
   height: 58rpx;
   box-sizing: border-box;
   margin: 0;
-  padding: 0 16rpx;
+  padding: 0 10rpx;
   border-radius: 7rpx;
   color: #fff;
   font-size: 24rpx;
-  line-height: 58rpx;
+  line-height: normal;
+  white-space: nowrap;
+  word-break: keep-all;
   background: #475569;
 }
 
+.tool-button::after {
+  border: 0;
+}
+
 .icon-button {
-  min-width: 56rpx;
+  min-width: 52rpx;
   padding: 0;
   font-size: 30rpx;
 }
@@ -73,11 +79,46 @@
   background: #64748b;
 }
 
+.location-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 126rpx;
+  height: 58rpx;
+  box-sizing: border-box;
+  padding: 0 10rpx;
+  border-radius: 7rpx;
+  color: #475569;
+  font-size: 22rpx;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  word-break: keep-all;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.location-status.locating {
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.9);
+}
+
+.location-status.failed {
+  color: #991b1b;
+  background: rgba(254, 202, 202, 0.95);
+}
+
+.location-status.tracking {
+  color: #166534;
+  background: rgba(220, 252, 231, 0.95);
+}
+
 .zoom-text {
-  min-width: 58rpx;
+  min-width: 50rpx;
   color: #475569;
   font-size: 24rpx;
   text-align: center;
+  white-space: nowrap;
 }
 
 .mode-switch {
@@ -91,11 +132,13 @@
 }
 
 .mode-item {
-  min-width: 94rpx;
-  padding: 16rpx 20rpx;
+  min-width: 78rpx;
+  padding: 16rpx 14rpx;
   color: #475569;
   font-size: 24rpx;
   text-align: center;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .mode-item.active {
@@ -270,6 +313,10 @@ input {
   background: #e5e7eb;
 }
 
+.exit-button {
+  background: #16a34a;
+}
+
 .button-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -294,7 +341,15 @@ input {
 }
 
 .result-section {
+  margin-bottom: 0;
+}
+
+.recommend-section {
   margin-bottom: 26rpx;
+}
+
+.recommendation-result {
+  margin-top: 18rpx;
 }
 
 .message {

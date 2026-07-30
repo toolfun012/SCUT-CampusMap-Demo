@@ -7,7 +7,7 @@
   --accent: #2563eb;
   --accent-dark: #1d4ed8;
   --start: #0ea5e9;
-  --goal: #22c55e;
+  --goal: #ef4444;
   --page: #eef3f8;
 }
 
@@ -141,6 +141,14 @@ button:disabled {
   background: #d1d5db;
 }
 
+.exit-button {
+  background: #16a34a;
+}
+
+.exit-button:hover {
+  background: #15803d;
+}
+
 .status-card p {
   min-height: 44px;
   margin: 0 0 12px;
@@ -246,6 +254,71 @@ dd {
   min-height: 0;
   background: #dfe7ef;
   touch-action: none;
+}
+
+.map-compass {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 38px;
+  height: 58px;
+  padding: 3px 0;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  pointer-events: none;
+}
+
+.compass-n,
+.compass-s {
+  height: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 13px;
+}
+
+.compass-n {
+  color: #dc2626;
+}
+
+.compass-s {
+  color: #64748b;
+}
+
+.compass-dial {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgba(15, 23, 42, 0.28);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.compass-needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+}
+
+.compass-needle.north {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 13px solid #dc2626;
+  transform: translate(-50%, -100%);
+}
+
+.compass-needle.south {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 13px solid #64748b;
+  transform: translate(-50%, 0);
 }
 
 .map-layer {

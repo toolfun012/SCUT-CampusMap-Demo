@@ -8,6 +8,16 @@
     "navigationBarTextStyle": "black",
     "backgroundColor": "#eef3f8"
   },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于在校园地图中显示当前位置"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "startLocationUpdate",
+    "onLocationChange"
+  ],
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }

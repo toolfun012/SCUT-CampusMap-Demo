@@ -6,6 +6,50 @@ const MAJOR_ROAD_BIAS = 1.35;
 const GAP_PENALTY = 8.0;
 const MAIN_ROAD_MIN_CLEARANCE = 2;
 const MAIN_ROAD_COMPONENT_REFERENCE = 420;
+const TOUR_MAX_WAYPOINTS = 32;
+const OPEN_GATE_IDS = [
+  "east_1_gate",
+  "west_2_gate",
+  "north_1_gate",
+  "north_gate",
+  "east_gate",
+  "south_gate",
+  "west_gate",
+];
+const TOUR_DORM_PASS_IDS = new Set([
+  "c1",
+  "c8",
+  "c14",
+  "d1",
+  "d4",
+  "e1",
+  "graduate_dorm_phase_1",
+]);
+const TOUR_KEY_BUILDING_IDS = new Set([
+  "library",
+  "concert_hall",
+  "academic_auditorium",
+  "international_hotel",
+  "a1",
+  "a3",
+  "a5",
+  "b1",
+  "b4",
+  "b8",
+  "b11",
+  "b12",
+]);
+const TOUR_TYPE_WEIGHTS = {
+  landscape: 10,
+  square: 8,
+  bridge: 8,
+  sports: 6,
+  dining: 6,
+  service: 5,
+  building: 4,
+  gate: 3,
+  dormitory: 2,
+};
 
 const state = {
   grid: [],
@@ -23,6 +67,7 @@ const state = {
   pendingStart: null,
   pendingGoal: null,
   route: [],
+  recommendation: null,
   ready: false,
   view: {
     scale: 1,
@@ -52,10 +97,13 @@ const elements = {
   routeButton: document.querySelector("#routeButton"),
   clearButton: document.querySelector("#clearButton"),
   resetSelectionButton: document.querySelector("#resetSelectionButton"),
+  exitRouteButton: document.querySelector("#exitRouteButton"),
   statusText: document.querySelector("#statusText"),
   startSnapText: document.querySelector("#startSnapText"),
   goalSnapText: document.querySelector("#goalSnapText"),
   routeSummaryText: document.querySelector("#routeSummaryText"),
+  recommendationSummaryText: document.querySelector("#recommendationSummaryText"),
+  recommendationStopsText: document.querySelector("#recommendationStopsText"),
   hoverPosition: document.querySelector("#hoverPosition"),
   baseMap: document.querySelector("#baseMap"),
   canvas: document.querySelector("#routeCanvas"),
@@ -232,6 +280,12 @@ function applyPlaces(places) {
         x: Number(place.center.x),
         y: Number(place.center.y),
       },
+      access: place.access
+        ? {
+            x: Number(place.access.x),
+            y: Number(place.access.y),
+          }
+        : null,
       polygons: place.polygons || [],
     }))
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -740,6 +794,18 @@ function pointKey(x, y) {
   return `${Number(x).toFixed(2)},${Number(y).toFixed(2)}`;
 }
 
+function splitPlaceName(name) {
+  const parts = String(name || "").split("/").map((part) => part.trim()).filter(Boolean);
+  return {
+    primary: parts[0] || "",
+    secondary: parts.slice(1).join(" / "),
+  };
+}
+
+function placeAnchor(place) {
+  return place.access || place.center;
+}
+
 function findPlace(query) {
   const value = query.trim();
   if (!value) throw new Error("请输入目的地");
@@ -766,7 +832,7 @@ function setCurrentFromInputs() {
   ensureReady();
   const x = Number(elements.startX.value);
   const y = Number(elements.startY.value);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("当前位置坐标不完整");
+  if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("当前起点坐标不完整");
 
   const snapped = snapToRoad(x, y);
   state.current = { input: { x, y }, snapped };
@@ -775,14 +841,15 @@ function setCurrentFromInputs() {
   elements.routeSummaryText.textContent = "-";
   elements.startSnapText.textContent = `(${snapped.x.toFixed(0)}, ${snapped.y.toFixed(0)})，偏移 ${snapped.distance.toFixed(1)}px`;
   setClickTarget("goal");
-  setStatus("当前位置已标记。下一次点击地图会填入终点坐标。");
+  setStatus("当前起点已吸附到路网。下一次点击地图会填入终点坐标。");
   drawOverlay();
 }
 
 function setDestinationFromInput() {
   ensureReady();
   const place = findPlace(elements.destinationInput.value);
-  const snappedGoal = snapToRoad(place.center.x, place.center.y);
+  const anchor = place.access || place.center;
+  const snappedGoal = snapToRoad(anchor.x, anchor.y);
   state.destination = {
     source: "place",
     place,
@@ -822,7 +889,7 @@ function setGoalPointFromInputs() {
 function routeToDestination() {
   ensureReady();
   if (state.pendingStart || !state.current) {
-    throw new Error("请先点击“确定当前位置”。");
+    throw new Error("请先点击“确认当前起点”。");
   }
   if (state.pendingGoal || !state.destination) {
     throw new Error("请先确定目的地或坐标终点。");
@@ -840,9 +907,188 @@ function routeToDestination() {
 
   const result = findRoute(state.current.snapped, state.destination.snapped);
   state.route = result.path;
+  state.recommendation = null;
 
   elements.routeSummaryText.textContent = `${result.path.length} 个网格点，约 ${routeLength(result.path).toFixed(0)}px，跨 ${result.virtualGapCells} 个假断点`;
   setStatus("路线已生成。");
+  drawOverlay();
+}
+
+function getRouteStart() {
+  if (state.current) {
+    return {
+      source: "已确认起点",
+      input: state.current.input,
+      snapped: state.current.snapped,
+    };
+  }
+
+  const x = Number(elements.startX.value);
+  const y = Number(elements.startY.value);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    throw new Error("请先填写并确认当前起点。");
+  }
+
+  return {
+    source: "起点输入",
+    input: { x, y },
+    snapped: snapToRoad(x, y),
+  };
+}
+
+function tourZone(point) {
+  const col = Math.min(3, Math.max(0, Math.floor(point.x / (MAP_WIDTH / 4))));
+  const row = Math.min(3, Math.max(0, Math.floor(point.y / (MAP_HEIGHT / 4))));
+  return `${row}-${col}`;
+}
+
+function tourCandidateWeight(place) {
+  if (place.type === "dormitory" && !TOUR_DORM_PASS_IDS.has(place.id)) return 0;
+  if (place.type === "gate" && !OPEN_GATE_IDS.includes(place.id)) return 0;
+  if (place.type === "building" && !TOUR_KEY_BUILDING_IDS.has(place.id)) return 0;
+  const base = TOUR_TYPE_WEIGHTS[place.type] || 0;
+  if (!base) return 0;
+  if (TOUR_KEY_BUILDING_IDS.has(place.id)) return base + 4;
+  if (TOUR_DORM_PASS_IDS.has(place.id)) return base + 1;
+  return base;
+}
+
+function buildTourCandidates(start) {
+  return state.places
+    .map((place) => {
+      const weight = tourCandidateWeight(place);
+      if (weight <= 0) return null;
+      const anchor = placeAnchor(place);
+      const snapped = snapToRoad(anchor.x, anchor.y);
+      if (snapped.row === start.row && snapped.col === start.col) return null;
+      return {
+        place,
+        snapped,
+        weight,
+        zone: tourZone(snapped),
+      };
+    })
+    .filter(Boolean);
+}
+
+function selectTourStops(start) {
+  const remaining = buildTourCandidates(start);
+  const selected = [];
+  const visitedZones = new Set();
+  let cursor = start;
+
+  while (selected.length < TOUR_MAX_WAYPOINTS && remaining.length > 0) {
+    let bestIndex = -1;
+    let bestScore = -Infinity;
+    remaining.forEach((candidate, index) => {
+      const distance = Math.max(80, Math.hypot(candidate.snapped.x - cursor.x, candidate.snapped.y - cursor.y));
+      const zoneBoost = visitedZones.has(candidate.zone) ? 1 : 1.45;
+      const typeBoost = candidate.place.type === "landscape" || candidate.place.type === "square" ? 1.2 : 1;
+      const score = (candidate.weight * zoneBoost * typeBoost) / Math.pow(distance / 700 + 1, 0.85);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+
+    if (bestIndex < 0) break;
+    const next = remaining.splice(bestIndex, 1)[0];
+    selected.push(next);
+    visitedZones.add(next.zone);
+    cursor = next.snapped;
+  }
+
+  return selected;
+}
+
+function buildCompositeRoute(start, stops) {
+  let cursor = start;
+  const path = [];
+  const includedStops = [];
+  let skipped = 0;
+  let virtualGapCells = 0;
+
+  stops.forEach((stop) => {
+    try {
+      const segment = findRoute(cursor, stop.snapped);
+      if (segment.path.length > 0) {
+        path.push(...(path.length > 0 ? segment.path.slice(1) : segment.path));
+      }
+      cursor = stop.snapped;
+      includedStops.push(stop);
+      virtualGapCells += segment.virtualGapCells || 0;
+    } catch (error) {
+      skipped += 1;
+    }
+  });
+
+  if (path.length < 2 || includedStops.length === 0) {
+    throw new Error("推荐路线暂时无法生成，请换一个当前位置再试。");
+  }
+
+  return { path, stops: includedStops, skipped, virtualGapCells };
+}
+
+function formatStopNames(stops, limit = 12) {
+  const names = stops.map((stop) => splitPlaceName(stop.place.name).primary || stop.place.id);
+  const visible = names.slice(0, limit).join(" → ");
+  return names.length > limit ? `${visible} → 等 ${names.length} 处` : visible;
+}
+
+function planTourRoute() {
+  ensureReady();
+  const start = getRouteStart();
+  const stops = selectTourStops(start.snapped);
+  const result = buildCompositeRoute(start.snapped, stops);
+  const length = routeLength(result.path);
+
+  state.route = result.path;
+  state.recommendation = {
+    type: "tour",
+    start: start.snapped,
+    stops: result.stops,
+  };
+  elements.recommendationSummaryText.textContent = `智能观光路线：从${start.source}出发，途经 ${result.stops.length} 处，约 ${length.toFixed(0)}px${result.skipped ? `，跳过 ${result.skipped} 处不可达点` : ""}`;
+  elements.recommendationStopsText.textContent = formatStopNames(result.stops);
+  setStatus("已生成智能观光路线，按景点权重和区域覆盖选择途经点。");
+  drawOverlay();
+}
+
+function planNearestExitRoute() {
+  ensureReady();
+  const start = getRouteStart();
+  let best = null;
+
+  OPEN_GATE_IDS.forEach((id) => {
+    const place = state.placesById.get(id);
+    if (!place) return;
+    try {
+      const anchor = placeAnchor(place);
+      const snapped = snapToRoad(anchor.x, anchor.y);
+      const result = findRoute(start.snapped, snapped);
+      const length = routeLength(result.path);
+      if (!best || length < best.length) {
+        best = { place, snapped, path: result.path, length, virtualGapCells: result.virtualGapCells || 0 };
+      }
+    } catch (error) {
+      // Ignore unreachable gates and keep evaluating the remaining open gates.
+    }
+  });
+
+  if (!best) throw new Error("没有找到可用开放校门路线。");
+
+  state.route = best.path;
+  state.recommendation = {
+    type: "exit",
+    start: start.snapped,
+    stops: [{ place: best.place, snapped: best.snapped }],
+  };
+  elements.recommendationSummaryText.textContent = `最近离开路线：${splitPlaceName(best.place.name).primary || best.place.id}，约 ${best.length.toFixed(0)}px`;
+  elements.recommendationStopsText.textContent = `开放校门白名单：${OPEN_GATE_IDS.map((id) => {
+    const gate = state.placesById.get(id);
+    return gate ? (splitPlaceName(gate.name).primary || gate.id) : id;
+  }).join("、")}`;
+  setStatus("已生成到最近开放校门的路线。");
   drawOverlay();
 }
 
@@ -855,6 +1101,8 @@ function drawOverlay() {
 
   if (state.route.length >= 2) {
     const points = simplifyPath(state.route).map(cellCenter);
+    const rawPoints = state.route.map(cellCenter);
+    const routeColors = getRouteColors();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -863,28 +1111,151 @@ function drawOverlay() {
       else ctx.lineTo(point.x, point.y);
     });
     ctx.strokeStyle = "rgba(255, 255, 255, 0.94)";
-    ctx.lineWidth = 24;
+    ctx.lineWidth = state.recommendation ? 22 : 24;
     ctx.stroke();
-    ctx.strokeStyle = "rgba(37, 99, 235, 0.96)";
-    ctx.lineWidth = 13;
-    ctx.stroke();
+    ctx.lineWidth = state.recommendation ? 11 : 13;
+    drawColoredRouteSegments(rawPoints, state.route, routeColors);
   }
 
+  if (state.recommendation && state.route.length >= 2) {
+    drawRecommendationMarkers();
+  }
   if (state.current) {
     drawMarker(state.current.snapped.x, state.current.snapped.y, "#0ea5e9");
+    drawMarkerLabel(state.current.snapped.x, state.current.snapped.y, "起点", "#0ea5e9");
   }
   if (state.pendingStart) {
     drawPendingMarker(state.pendingStart.x, state.pendingStart.y, "#0ea5e9");
   }
   if (state.destination) {
-    drawMarker(state.destination.snapped.x, state.destination.snapped.y, "#22c55e");
+    drawMarker(state.destination.snapped.x, state.destination.snapped.y, "#ef4444");
+    const label = state.destination.source === "place"
+      ? splitPlaceName(state.destination.place.name).primary || "终点"
+      : "终点";
+    drawMarkerLabel(state.destination.snapped.x, state.destination.snapped.y, label, "#dc2626");
   }
   if (state.pendingGoal) {
-    drawPendingMarker(state.pendingGoal.x, state.pendingGoal.y, "#22c55e");
+    drawPendingMarker(state.pendingGoal.x, state.pendingGoal.y, "#ef4444");
   }
 }
 
-function drawMarker(x, y, color, radius = 28, innerRadius = 19, alpha = 1) {
+function getRouteColors() {
+  if (!state.recommendation) {
+    return [
+      "rgba(37, 99, 235, 0.96)",
+      "rgba(168, 85, 247, 0.96)",
+      "rgba(245, 158, 11, 0.96)",
+    ];
+  }
+  if (state.recommendation.type === "exit") {
+    return [
+      "rgba(22, 163, 74, 0.96)",
+      "rgba(37, 99, 235, 0.96)",
+      "rgba(168, 85, 247, 0.96)",
+    ];
+  }
+  return [
+    "rgba(245, 158, 11, 0.96)",
+    "rgba(14, 165, 233, 0.96)",
+    "rgba(168, 85, 247, 0.96)",
+    "rgba(22, 163, 74, 0.96)",
+  ];
+}
+
+function drawColoredRouteSegments(points, cells, colors) {
+  if (!points || points.length < 2) return;
+  const edgeVisits = {};
+  let activeColor = null;
+  let activeEnd = null;
+
+  const flush = () => {
+    if (activeEnd) {
+      ctx.strokeStyle = activeColor;
+      ctx.stroke();
+      activeEnd = null;
+    }
+  };
+
+  for (let index = 1; index < points.length; index += 1) {
+    const color = colors[edgeVisitColorIndex(cells[index - 1], cells[index], edgeVisits, colors.length)];
+    if (color !== activeColor) {
+      flush();
+      ctx.beginPath();
+      ctx.moveTo(points[index - 1].x, points[index - 1].y);
+      activeColor = color;
+    }
+    ctx.lineTo(points[index].x, points[index].y);
+    activeEnd = points[index];
+  }
+  flush();
+}
+
+function edgeVisitColorIndex(a, b, visits, colorCount) {
+  const first = `${a.row},${a.col}`;
+  const second = `${b.row},${b.col}`;
+  const key = first < second ? `${first}|${second}` : `${second}|${first}`;
+  const visit = visits[key] || 0;
+  visits[key] = visit + 1;
+  return visit % colorCount;
+}
+
+function drawRouteArrows(points, color) {
+  if (!points || points.length < 2) return;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const dx = current.x - previous.x;
+    const dy = current.y - previous.y;
+    const segmentLength = Math.hypot(dx, dy);
+    if (segmentLength < 96) continue;
+    drawRouteArrow(
+      (previous.x + current.x) / 2,
+      (previous.y + current.y) / 2,
+      Math.atan2(dy, dx),
+      color,
+    );
+  }
+}
+
+function drawRouteArrow(x, y, angle, color) {
+  const size = state.recommendation ? 30 : 27;
+  const halfWidth = size * 0.46;
+  const tailX = x - Math.cos(angle) * size * 0.72;
+  const tailY = y - Math.sin(angle) * size * 0.72;
+  const tipX = x + Math.cos(angle) * size * 0.74;
+  const tipY = y + Math.sin(angle) * size * 0.74;
+  const perpX = -Math.sin(angle);
+  const perpY = Math.cos(angle);
+
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(tailX + perpX * halfWidth, tailY + perpY * halfWidth);
+  ctx.lineTo(tailX - perpX * halfWidth, tailY - perpY * halfWidth);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.94)";
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawRecommendationMarkers() {
+  const color = state.recommendation.type === "exit" ? "#16a34a" : "#f59e0b";
+  (state.recommendation.stops || []).forEach((stop, index) => {
+    const isLast = index === state.recommendation.stops.length - 1;
+    const label = state.recommendation.type === "tour" && !isLast ? String(index + 1) : "";
+    drawMarker(stop.snapped.x, stop.snapped.y, isLast ? "#22c55e" : color, 23, 13, isLast ? 1 : 0.88, label);
+    if (isLast && state.recommendation.type === "exit") {
+      const gateName = splitPlaceName(stop.place.name).primary || stop.place.id;
+      drawMarkerLabel(stop.snapped.x, stop.snapped.y, gateName, "#16a34a");
+    }
+  });
+}
+
+function drawMarker(x, y, color, radius = 28, innerRadius = 19, alpha = 1, label = "") {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.beginPath();
@@ -895,7 +1266,57 @@ function drawMarker(x, y, color, radius = 28, innerRadius = 19, alpha = 1) {
   ctx.arc(x, y, innerRadius, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
+  if (label) {
+    ctx.font = "700 18px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(label, x, y + 0.5);
+  }
   ctx.restore();
+}
+
+function drawMarkerLabel(x, y, text, color) {
+  const fontSize = 12;
+  const paddingX = 6;
+  const paddingY = 4;
+  const offsetX = 12;
+  const offsetY = 20;
+  const textX = x + offsetX;
+  const textY = y - offsetY;
+
+  ctx.save();
+  ctx.font = `600 ${fontSize}px sans-serif`;
+  const width = ctx.measureText(text).width + paddingX * 2;
+  const height = fontSize + paddingY * 2;
+  const top = textY - height;
+  const left = textX;
+  roundRectPath(ctx, left, top, width, height, 6);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.82)";
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  ctx.fillText(text, left + paddingX, top + height / 2 + 0.5);
+  ctx.restore();
+}
+
+function roundRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.arcTo(x + width, y, x + width, y + r, r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.arcTo(x + width, y + height, x + width - r, y + height, r);
+  ctx.lineTo(x + r, y + height);
+  ctx.arcTo(x, y + height, x, y + height - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
 }
 
 function drawPendingMarker(x, y, color) {
@@ -916,9 +1337,12 @@ function clearAll() {
   state.pendingStart = null;
   state.pendingGoal = null;
   state.route = [];
+  state.recommendation = null;
   elements.startSnapText.textContent = "-";
   elements.goalSnapText.textContent = "-";
   elements.routeSummaryText.textContent = "-";
+  elements.recommendationSummaryText.textContent = "-";
+  elements.recommendationStopsText.textContent = "-";
   setStatus(state.ready ? "已清除。" : "正在加载地图数据...");
   drawOverlay();
 }
@@ -935,6 +1359,7 @@ elements.setStartButton.addEventListener("click", () => handleAction(setCurrentF
 elements.setDestinationButton.addEventListener("click", () => handleAction(setDestinationFromInput));
 elements.setGoalPointButton.addEventListener("click", () => handleAction(setGoalPointFromInputs));
 elements.routeButton.addEventListener("click", () => handleAction(routeToDestination));
+elements.exitRouteButton.addEventListener("click", () => handleAction(planNearestExitRoute));
 elements.clearButton.addEventListener("click", clearAll);
 elements.resetSelectionButton.addEventListener("click", clearAll);
 elements.destinationInput.addEventListener("keydown", (event) => {
@@ -1029,14 +1454,14 @@ elements.canvas.addEventListener("click", (event) => {
     state.destination = null;
     state.pendingGoal = point;
     state.route = [];
-    setStatus("终点坐标已填入，点击“确定坐标终点”后生效。");
+    setStatus("终点坐标已填入，点击“确定坐标终点”后吸附到路网。");
   } else {
     elements.startX.value = point.x.toFixed(0);
     elements.startY.value = point.y.toFixed(0);
     state.current = null;
     state.pendingStart = point;
     state.route = [];
-    setStatus("起点坐标已填入，点击“确定当前位置”后生效。");
+    setStatus("起点坐标已填入，点击“确认当前起点”后吸附到路网。");
   }
   drawOverlay();
 });

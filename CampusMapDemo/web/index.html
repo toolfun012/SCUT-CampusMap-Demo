@@ -23,18 +23,11 @@
               <input id="startY" type="number" inputmode="numeric" placeholder="2405" />
             </label>
           </div>
-          <button id="setStartButton" type="button">确定当前位置</button>
+          <button id="setStartButton" type="button">确认当前起点</button>
         </section>
 
         <section class="control-group">
           <h2>目的地</h2>
-          <label class="full-field">
-            地点
-            <input id="destinationInput" list="placeOptions" placeholder="library / 图书馆" />
-            <datalist id="placeOptions"></datalist>
-          </label>
-          <button id="setDestinationButton" type="button">确定地点目的地</button>
-          <div class="field-divider">或使用终点坐标</div>
           <div class="input-row">
             <label>
               X
@@ -46,6 +39,17 @@
             </label>
           </div>
           <button id="setGoalPointButton" type="button">确定坐标终点</button>
+          <div class="field-divider">或使用预设终点</div>
+          <label class="full-field">
+            地点
+            <input id="destinationInput" list="placeOptions" placeholder="library / 图书馆" />
+            <datalist id="placeOptions"></datalist>
+          </label>
+          <button id="setDestinationButton" type="button">确定地点目的地</button>
+        </section>
+
+        <section class="control-group">
+          <h2>路线规划</h2>
           <button id="routeButton" type="button">规划路线</button>
         </section>
 
@@ -68,6 +72,21 @@
           </dl>
           <button id="resetSelectionButton" class="secondary-button" type="button">清空起终点和路线</button>
         </section>
+
+        <section class="control-group recommendation-card">
+          <h2>推荐路线</h2>
+          <button id="exitRouteButton" class="exit-button" type="button">最近离开路线</button>
+          <dl>
+            <div>
+              <dt>推荐结果</dt>
+              <dd id="recommendationSummaryText">-</dd>
+            </div>
+            <div>
+              <dt>途经点</dt>
+              <dd id="recommendationStopsText">-</dd>
+            </div>
+          </dl>
+        </section>
       </aside>
 
       <section class="map-panel">
@@ -89,6 +108,14 @@
           <div class="map-layer" id="mapLayer">
             <img id="baseMap" alt="华南理工大学大学城校区地图" src="./assets/campus_map.png" />
             <canvas id="routeCanvas"></canvas>
+          </div>
+          <div class="map-compass" aria-hidden="true">
+            <div class="compass-n">N</div>
+            <div class="compass-dial">
+              <div class="compass-needle north"></div>
+              <div class="compass-needle south"></div>
+            </div>
+            <div class="compass-s">S</div>
           </div>
         </div>
       </section>

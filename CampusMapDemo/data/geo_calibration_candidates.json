@@ -1,0 +1,103 @@
+{
+  "coordinateSystem": "gcj02",
+  "campus": "???????????",
+  "note": "Mini-program GCJ-02 anchors. Coordinates are from AMap POIs and pixels are confirmed on the official campus map screenshots; verify with more real-device samples before release.",
+  "fitControls": [
+    {
+      "id": "west_1_gate",
+      "x": 710.0,
+      "y": 2405.0,
+      "lng": 113.4018,
+      "lat": 23.046243,
+      "source": "AMap: university town living area west 1 gate"
+    },
+    {
+      "id": "natatorium",
+      "x": 1510.0,
+      "y": 1450.0,
+      "lng": 113.404925,
+      "lat": 23.049625,
+      "source": "AMap: university town swimming center"
+    },
+    {
+      "id": "athletic_field",
+      "x": 1375.0,
+      "y": 2600.0,
+      "lng": 113.404014,
+      "lat": 23.045345,
+      "source": "AMap: university town east sports field"
+    },
+    {
+      "id": "b12_environment",
+      "x": 2280.0,
+      "y": 3650.0,
+      "lng": 113.408378,
+      "lat": 23.044412,
+      "source": "AMap: university town environment building"
+    },
+    {
+      "id": "software_school",
+      "x": 2665.0,
+      "y": 3215.0,
+      "lng": 113.407367,
+      "lat": 23.046051,
+      "source": "AMap: university town software school"
+    }
+  ],
+  "points": [
+    {
+      "id": "north_1_gate",
+      "name": "北一门 / North 1 Gate",
+      "lng": 113.403312,
+      "lat": 23.053218,
+      "x": 1232.0,
+      "y": 272.0,
+      "source": "AMap POI: 华南理工大学大学城校区(北一门), pixel from user-confirmed official map screenshot"
+    },
+    {
+      "id": "north_gate",
+      "name": "北门 / North Gate",
+      "lng": 113.407156,
+      "lat": 23.053895,
+      "x": 2296.0,
+      "y": 97.0,
+      "source": "AMap POI: 华南理工大学大学城校区(北门), pixel from user-confirmed official map screenshot"
+    },
+    {
+      "id": "east_gate",
+      "name": "东门 / East Gate",
+      "lng": 113.408492,
+      "lat": 23.047255,
+      "x": 2588.0,
+      "y": 2094.0,
+      "source": "AMap POI: 华南理工大学大学城校区(东门), pixel from user-confirmed official map screenshot"
+    },
+    {
+      "id": "south_gate",
+      "name": "南门 / South Gate",
+      "lng": 113.409457,
+      "lat": 23.044311,
+      "x": 2994.0,
+      "y": 3013.0,
+      "source": "AMap POI: 华南理工大学大学城校区(南门), pixel from user-confirmed official map screenshot"
+    },
+    {
+      "id": "west_gate",
+      "name": "西门 / West Gate",
+      "lng": 113.404389,
+      "lat": 23.04377,
+      "x": 1515.0,
+      "y": 3140.0,
+      "source": "AMap POI: 华南理工大学大学城校区(西门), pixel from user-confirmed official map screenshot"
+    },
+    {
+      "id": "west_3_gate",
+      "name": "西三门 / West 3 Gate",
+      "lng": 113.400137,
+      "lat": 23.049783,
+      "x": 338.0,
+      "y": 1318.0,
+      "source": "AMap POI: 华南理工大学大学城校区(西三门), pixel from user-confirmed official map screenshot"
+    }
+  ]
+}

@@ -79,6 +79,10 @@ class CampusRouter {
           x: Number(place.center.x),
           y: Number(place.center.y)
         },
+        access: place.access ? {
+          x: Number(place.access.x),
+          y: Number(place.access.y)
+        } : null,
         polygons: place.polygons || []
       }))
       .sort((left, right) => left.id.localeCompare(right.id));

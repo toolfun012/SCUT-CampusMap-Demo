@@ -3,7 +3,7 @@
   "compileType": "miniprogram",
   "projectname": "SCUT-CampusMap-Demo",
   "description": "Campus map navigation MVP",
-  "appid": "touristappid",
+  "appid": "wx93e34461bb1b4b5d",
   "setting": {
     "urlCheck": true,
     "es6": true,
